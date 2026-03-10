@@ -3,35 +3,40 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/ioctl.h>
+#include <signal.h>
+#include <dirent.h>
 
 #define MAX_ARGS 64
 #define MAX_LINE 1024
+#define iloscKolorow 6
 
 
-char * newFolder[] = {"sh", "./uwu.sh" };
 char bar[50];
 char numberOfColor = 0;
 char numberOfTextColor = 0;
 char numberOfTextColorNUser = 0;
+char * welcomeMessage = "";
 
-#define iloscKolorow 5
-
+void handle_sigint(int sig) {
+    printf("");
+}
 
 char * kolory[iloscKolorow][2] = {
     {"grey","%s"},
     {"pink","\e[95m%s"},
     {"green","\e[0;32m%s"},
     {"yellow","\e[0;33m%s"},
-    {"blue","\e[0;94m%s"}
-
-    
+    {"blue","\e[0;94m%s"},
+    {"cyan","\e[0;36m%s"}
 };
 
 
+char configFileUwU[] = "bar=uwuSH>\ncolor=pink\ntextColor=yellow\ntextColorNotUser=blue\nprintf=echo fortnite\nbinarySpace=/moje/\nwelcomeMessage=Meow Meow :3\n";
+
+DIR * sciezka;
 char dir[400] = "/";
-
 typedef struct {unsigned char x : 2;} bit;
-
 
 int stringCompare(char uwu [], char uwu2[] )
 {
@@ -43,10 +48,13 @@ int stringCompare(char uwu [], char uwu2[] )
 }
 int stringCompareX(char x[], char z[])
 {
-    for (int i = 0; 1; i++)
+    int pZ=0,i=0;
+    for (pZ = 0; z[pZ] == 32; pZ++);
+
+    for (i=0; 1; i++)
     {
-        if (x[i] == 0 && (z[i] == 0 || z[i] == ' ') ) return 1;
-        else if (x[i] != z[i] ) return 0;
+        if (!x[i] && (!z[i+pZ] || z[i+pZ] == ' ') ) return 1;
+        else if (x[i] != z[i+pZ] ) return 0;
     }
 }
 
@@ -63,7 +71,7 @@ typedef char * string;
 
 string * binaryFilesLocationNya;
 int binaryFilesLocationNyaAmout;
-
+char * user;
 
 void reloadConfig()
 {
@@ -77,10 +85,9 @@ void reloadConfig()
     binaryFilesLocationNyaAmout = 1;
 
     char pathConfig[100];
-    char * user = getenv("USER");
+    user = getenv("USER");
     
     sprintf(dir,"/home/%s/",user );
-    
     sprintf(pathConfig,"/home/%s/.config/uwush/config.txt",user);
 
     FILE * configFile = fopen(pathConfig, "r");
@@ -89,11 +96,8 @@ void reloadConfig()
     char pierwszyN[2] = {0,0};
 
     int ostatni = ftell(configFile);
-    
     char procent = 0;
 
-
-    
     for (int i=0;i<ostatni;i++)
     {
         fseek(configFile,i,SEEK_SET);
@@ -101,7 +105,7 @@ void reloadConfig()
         if (znak == '=') procent=1;
         else if (znak == '\n' || i+1 == ostatni ){
             procent = 0;
-            for (int b=0;b<2;b++){ name[b][pierwszyN[b]] = 0; pierwszyN[b] = 0;}
+            for (int b=0;b<2;b++) { name[b][pierwszyN[b]] = 0; pierwszyN[b] = 0;}
             
 
             if (stringCompare(name[0],"bar" )) for (int b=0;b<50;b++) bar[b] = name[1][b];
@@ -114,7 +118,8 @@ void reloadConfig()
             else if (stringCompare(name[0],"textColorNotUser")) {
                 for (int b = 0; b < iloscKolorow; b++) if (stringCompare(name[1],kolory[b][0])) {numberOfTextColorNUser = b; break;}
             }
-            if (stringCompare(name[0],"binarySpace" )) {
+            else if (stringCompare(name[0],"welcomeMessage" )) welcomeMessage = strdup(name[1]);
+            else if (stringCompare(name[0],"binarySpace" )) {
                 binaryFilesLocationNyaAmout++;
                 string * tymczasowy = realloc(binaryFilesLocationNya,binaryFilesLocationNyaAmout * sizeof(string));
                 binaryFilesLocationNya = tymczasowy;
@@ -136,31 +141,53 @@ void reloadConfig()
 }
 
 int main(int argc, char *argv[]) {
+    signal(SIGINT,handle_sigint);
+    user = getenv("USER");
+
     char line[MAX_LINE];
     char *args[MAX_ARGS];
-
     reloadConfig();
 
-    pid_t nowyFolder = fork();
-    if (!nowyFolder) execvp(newFolder[0],newFolder);
-    else wait(0);
+    printf("%s\n",welcomeMessage);
+    
+    if (1)
+    {
+        char buffor[200];
+        sprintf(buffor,"/home/%s/.config/test",user);
+        FILE *  test = fopen(buffor,"w");
+        sprintf(buffor,"mkdir /home/%s/.config/",user);
+        if (test == NULL) system(buffor);
+        else fclose(test);
+        sprintf(buffor,"/home/%s/.config/config.txt",user);
+        test = fopen(buffor,"r");
+        if (test == NULL){
+            test = fopen(buffor,"w");
+            fprintf(test,"%s",configFileUwU);
+        }
+        fclose(test);
+    }
 
     while (1) {
         char czyCd = 0;
         char waitOrNot = 0;
 
+        while (1)
+        {
+            printf(kolory[numberOfColor][1],bar);
+            printf(kolory[numberOfTextColor][1],"");
+            fflush(stdout);
+            fgets(line,sizeof(line),stdin);
+            if (strlen(line) != 1 ) break;
+            usleep(10000);
+        }
         
-        printf(kolory[numberOfColor][1],bar);
-        printf(kolory[numberOfTextColor][1],"");
-        fflush(stdout);
-        if (!fgets(line, sizeof(line), stdin)) break;
         printf("\033[0m");
 
         printf(kolory[numberOfTextColorNUser][1],"");
         fflush(stdout);
 
         line[strcspn(line, "\n")] = 0;
-        if (stringCompare(line, "exit")) break;
+        if (stringCompareX("exit",line) || stringCompare(line, "quit")) break;
         else if (stringCompare(line, "back")) {
             czyCd = 1;
             for (int i = 0; i < strlen(dir)+1; i++) dirBack[i] = dir[i];
@@ -186,6 +213,43 @@ int main(int argc, char *argv[]) {
             for (int i = 1; i < binaryFilesLocationNyaAmout; i++) printf("%s\n",binaryFilesLocationNya[i]);
             czyCd = 1;
         }
+        else if (stringCompareX("ls",line))
+        {
+            struct dirent * plik;
+
+            sciezka = opendir(dir);
+
+            if (sciezka != NULL)
+            {
+                struct winsize w;
+                ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+                int najdluzsy = 0; 
+                while(( plik = readdir( sciezka ) ) ) if (strlen(plik->d_name) > najdluzsy) najdluzsy = strlen(plik->d_name);
+
+                int iloscZnakow = 0;
+
+                rewinddir(sciezka);
+
+                while(( plik = readdir( sciezka ) ) ) { 
+                    int colorr = 2;
+                    FILE * nyga = fopen((*plik).d_name, "r");
+                    if (nyga == NULL) colorr++;
+                    else fclose(nyga);
+                    
+                    iloscZnakow+=najdluzsy;
+                    if (iloscZnakow+najdluzsy > w.ws_col) {iloscZnakow = 0; printf("\n");}
+
+                    char buffor[200];
+                    sprintf(buffor,"%s",plik->d_name);
+                    #define bbb for (int i = 0; i < (najdluzsy - strlen(plik->d_name))/2; i++ ) printf(" ");
+                    bbb printf(kolory[colorr][1],buffor); bbb
+
+                }
+            }
+            printf("\n");
+            czyCd = 1;
+        }
 
         //alias
         for (int i = 1; i < aliasyNyaAmout; i++)
@@ -195,11 +259,11 @@ int main(int argc, char *argv[]) {
                 char licznik = 0, czyByl = 0;
                 while (!czyByl) {
                     licznik++;
-                    if (line[licznik] == ' ' || licznik == strlen(line) ) czyByl = 1;
+                    if (line[licznik] == ' ' || licznik+1 == strlen(line) ) czyByl = 1;
                 }
                 int lineLen = strlen(line);
-                for (int b = licznik; b < lineLen; b++) line[b-licznik] = line[b];
-                for (int b = lineLen-licznik; b < lineLen; b++) line[b] = 0;
+                for (int b = licznik-1; b < lineLen; b++) line[b-licznik-1] = line[b];
+                for (int b = lineLen-licznik-1; b < lineLen; b++) line[b] = 0;
                 lineLen = strlen(line);
                 for (int b = lineLen-1; b >= 0 ; b-- ) line[b+strlen(aliasyNya[i].x[1])] = line[b];
                 for (int b = 0; b < strlen(aliasyNya[i].x[1]); b++ ) line[b] = aliasyNya[i].x[1][b];
@@ -267,8 +331,7 @@ int main(int argc, char *argv[]) {
                 chdir(dir);
                 execvp(args[0], args);
                 
-                for (int i = 1; i < binaryFilesLocationNyaAmout; i++)
-                {
+                for (int i = 1; i < binaryFilesLocationNyaAmout; i++){
                     char uwu[100];
                     sprintf(uwu,"%s%s",binaryFilesLocationNya[i],args[0]);
                     args[0] = uwu;
@@ -279,8 +342,12 @@ int main(int argc, char *argv[]) {
             } 
             else if (pid > 0 && !waitOrNot) wait(0); 
         }
-        
     }
+    for (int i = 1; i < aliasyNyaAmout; i++) for (int b = 0; b < 2; b++) free(aliasyNya->x[b]);
+    for (int b = 0; b < binaryFilesLocationNyaAmout; b++)  free(binaryFilesLocationNya[b]);
+
     free(aliasyNya);
+    free(binaryFilesLocationNya);
+    closedir( sciezka ); 
     return 0;
 }
